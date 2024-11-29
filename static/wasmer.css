@@ -1,0 +1,22 @@
+#menu #wasmer-dashboard-link {
+    border: 1px solid #000;
+    background: none;
+    padding: 4px 12px;
+    border-radius: 14px;
+    margin-bottom: 1rem;
+    display: inline-flex;
+    gap: 4px;
+    vertical-align: middle;
+}
+#menu #wasmer-dashboard-link svg {
+    height:18px;
+    width:15px;
+    display: inline-block;
+}
+#menu #wasmer-dashboard-link:hover {
+    background-color: black!important;
+    color: white;
+}
+#menu #wasmer-dashboard-link:hover svg {
+    fill: white;
+}

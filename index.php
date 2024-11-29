@@ -1,7 +1,13 @@
 <?php
 
+define("IS_LOCAL", !isset($_SERVER['HTTP_X_FORWARDED_FOR'])
+&& isset($_SERVER['REMOTE_ADDR'])
+&& in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'], true));
+
+define("ADMINER_HTTPS_REDIRECT", isset($_ENV["ADMINER_HTTPS_REDIRECT"]) ? $_ENV["ADMINER_HTTPS_REDIRECT"] : IS_LOCAL);
+
 // Redirect to HTTPS if HTTPS_REDIRECT is defined in environment variables
-if (getenv('ADMINER_HTTPS_REDIRECT') === 'true' && (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off')) {
+if (ADMINER_HTTPS_REDIRECT === 'true' && (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === 'off')) {
 	header('HTTP/1.1 301 Moved Permanently');
 	header('Location: https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
 	exit();
@@ -35,9 +41,6 @@ if (empty($_GET['file'])) {
 
 function adminer_object()
 {
-	$local = !isset($_SERVER['HTTP_X_FORWARDED_FOR'])
-		&& isset($_SERVER['REMOTE_ADDR'])
-		&& in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'], true);
 
 	include_once __DIR__ . '/plugins/plugin.php';
 
@@ -46,6 +49,7 @@ function adminer_object()
 	}
 
 	$plugins = [
+		new AdminerWasmer,
 		new AdminerDisableJush,
 		new AdminerAutocomplete,
 		new AdminerSaveMenuPos,
@@ -53,31 +57,9 @@ function adminer_object()
 		new AdminerDumpJson,
 		new AdminerDumpPhpPrototype,
 		new AdminerTablesFilter,
+		new AdminerLoginWithoutCredentials,
 	];
 
-	if ($local) {
-		$plugins[] = new AdminerLoginWithoutCredentials;
-	}
-
-
-	if (getenv('ADMINER_SERVER') && getenv('ADMINER_USERNAME')) {
-		if (!isset($_GET['username'])) {
-			$_GET['username'] = '';
-		}
-
-		class AdminerCustomization extends AdminerPlugin
-		{
-			function credentials()
-			{
-				$server = getenv('ADMINER_SERVER');
-				$username = getenv('ADMINER_USERNAME');
-				$password = getenv('ADMINER_PASSWORD');
-				return [$server, $username, $password];
-			}
-		}
-
-		return new AdminerCustomization($plugins);
-	}
 
 	return new AdminerPlugin($plugins);
 }
