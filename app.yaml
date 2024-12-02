@@ -1,0 +1,8 @@
+kind: wasmer.io/App.v0
+name: adminer
+owner: ayysadmin
+package: '.'
+capabilities:
+  database:
+    engine: mysql
+app_id: da_nm3IetwUwaJ2
