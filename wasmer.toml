@@ -14,4 +14,4 @@ name = "run"
 module = "php/php:php"
 runner = "wasi"
 [command.annotations.wasi]
-main-args = ["-t", "/app", "-S", "localhost:8080"]
+main-args = ["-c", "/app/php.ini", "-t", "/app", "-S", "localhost:8080"]
