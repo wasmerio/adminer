@@ -2,9 +2,10 @@
 name = 'wasmer/adminer'
 version = '0.1.0'
 description = 'Adminer - Database management in a single PHP file'
+entrypoint = "run"
 
 [dependencies]
-"php/php" = "=8.3.402"
+"php/php" = "8"
 
 [fs]
 "/app" = "."
@@ -12,6 +13,7 @@ description = 'Adminer - Database management in a single PHP file'
 [[command]]
 name = "run"
 module = "php/php:php"
-runner = "wasi"
+runner = "https://webc.org/runner/wasi"
+
 [command.annotations.wasi]
-main-args = ["-t", "/app", "-S", "localhost:8080"]
+main-args = ["-c", "/app/php.ini", "-t", "/app", "-S", "localhost:8080"]
