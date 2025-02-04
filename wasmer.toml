@@ -1,6 +1,6 @@
 [package]
 name = 'wasmer/adminer'
-version = '0.2.1'
+version = '0.2.2'
 description = 'Adminer - Database management in a single PHP file'
 entrypoint = "run"
 
