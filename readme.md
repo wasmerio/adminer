@@ -8,7 +8,19 @@ Customizations for [Adminer](https://www.adminer.org), the best database managem
 - SQL autocomplete plugin
 - plugin that dumps to PHP code
 - plugin that saves menu scroll position
+- plugin that allows magic login with Wasmer (requires `WASMER_GRAPHQL_URL` environment variable)
 
+Testing
+-------
+
+You can test the plugin locally by running the following command:
+
+```
+mkdir data
+wasmer run . --net --mapdir=/data:data --env="WASMER_GRAPHQL_URL=https://registry.wasmer.io/graphql"
+```
+
+This will start the Adminer application in a Wasmer container and map the current directory to the `/data` directory.
 
 Installation
 ------------
