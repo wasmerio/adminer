@@ -1,8 +1,10 @@
 [package]
 name = 'wasmer/adminer'
-version = '0.2.2'
+version = '0.2.3'
 description = 'Adminer - Database management in a single PHP file'
 entrypoint = "run"
+readme = "README.md"
+repository = "https://github.com/wasmerio/adminer"
 
 [dependencies]
 "php/php" = "8"
