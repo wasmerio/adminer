@@ -92,9 +92,13 @@ class AdminerWasmer
             $adminUrl = $nodeData["app"]["adminUrl"];
             setcookie("wasmer_admin_url", $adminUrl, time() + 3600, "/");
 
+            $server = $nodeData["host"];
+            if ($nodeData["port"]) {
+                $server .= ":" . $nodeData["port"];
+            }
             $_POST["auth"] = array(
                 "driver" => "server",
-                "server" => $nodeData["host"],
+                "server" => $server,
                 "username" => $nodeData["username"],
                 "db" => $nodeData["name"],
                 "password" => $nodeData["password"],
