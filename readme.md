@@ -113,11 +113,11 @@ If the magic login link redirects to the login form instead of the admin page:
 
 ### Security Notes
 
-- The magic login token (`wott_*`) is validated by the Wasmer backend, not stored locally
-- Token validation happens server-side via the GraphQL API
-- Tokens are temporary and expire after a certain time period
-- When `WASMER_APP_ID` is configured, only databases from that specific app can be accessed
-- The admin URL is stored in a cookie for 1 hour to enable navigation back to the dashboard
+- The magic login token (`wott_*`) is validated by the Wasmer backend, not stored locally.
+- Token validation happens server-side via the GraphQL API.
+- Tokens are temporary and expire after a certain time period.
+- When `WASMER_APP_ID` is configured, only databases from that specific app can be accessed.
+- The admin URL is stored in a cookie for 1 hour to enable navigation back to the dashboard.
 
 
 Login page
