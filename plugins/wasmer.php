@@ -206,7 +206,7 @@ class AdminerWasmer
             $escapedAdminUrl = htmlspecialchars($adminUrl);
             if ($escapedAdminUrl) {
 ?>
-                <a id="wasmer-dashboard-link" href="<?php echo "$escapedAdminUrl"; ?>">
+                <a id="wasmer-dashboard-link" href="<?php echo $escapedAdminUrl; ?>">
                     <svg viewBox="0 0 29 34" height="1em" width="1em">
                         <g clip-path="url(#prefix__clip0_1268_12249)">
                             <path d="M0 12.3582C0 10.4725 0 9.52973 0.507307 9.23683C1.01461 8.94394 1.83111 9.41534 3.46411 10.3581L10.784 14.5843C12.417 15.5271 13.2335 15.9985 13.7408 16.8771C14.2481 17.7558 14.2481 18.6986 14.2481 20.5843V29.0364C14.2481 30.9221 14.2481 31.8649 13.7408 32.1578C13.2335 32.4507 12.417 31.9793 10.784 31.0365L3.4641 26.8103C1.83111 25.8675 1.01461 25.3961 0.507307 24.5175C0 23.6388 0 22.696 0 20.8103V12.3582Z"></path>
