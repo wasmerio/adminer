@@ -1,5 +1,18 @@
-<?
+<?php
 
+/**
+ * Execute a GraphQL query against the Wasmer registry
+ * 
+ * This function sends a GraphQL query to the Wasmer backend API to fetch
+ * database credentials and metadata. It's used by the magic login system
+ * to authenticate and retrieve database connection information.
+ * 
+ * @param string $registry The GraphQL endpoint URL (e.g., https://registry.wasmer.io/graphql)
+ * @param string $query The GraphQL query string
+ * @param array $variables Variables to be used in the GraphQL query
+ * @param string|null $authToken Optional Bearer token for authentication (the magic login token)
+ * @return array|null The decoded JSON response, or NULL on error
+ */
 function wasmer_graphql_query($registry, $query, $variables, $authToken = NULL)
 {
     // Prepare the payload
@@ -36,20 +49,69 @@ function wasmer_graphql_query($registry, $query, $variables, $authToken = NULL)
     return $responseData;
 }
 
+/**
+ * AdminerWasmer Plugin
+ * 
+ * This plugin implements the "magic login" feature for Adminer, which allows
+ * users to authenticate and connect to databases using a temporary token
+ * provided by the Wasmer backend.
+ * 
+ * MAGIC LOGIN FLOW:
+ * =================
+ * 1. User accesses URL with format: ?magiclogin=<token>&dbid=<database_id>
+ * 2. The token (starting with "wott_") is a backend authentication token from Wasmer
+ * 3. Plugin makes GraphQL query to WASMER_GRAPHQL_URL with token as Bearer auth
+ * 4. GraphQL API validates token and returns database credentials if authorized
+ * 5. Plugin validates database belongs to WASMER_APP_ID (if configured)
+ * 6. Database credentials are automatically injected into Adminer's login form
+ * 7. User is logged into the database automatically without manual credentials
+ * 
+ * REQUIRED ENVIRONMENT VARIABLES:
+ * ===============================
+ * - WASMER_GRAPHQL_URL: URL to Wasmer's GraphQL API (e.g., https://registry.wasmer.io/graphql)
+ * - WASMER_APP_ID (optional): Restricts access to databases from a specific app ID for security
+ * 
+ * URL PARAMETERS:
+ * ===============
+ * - magiclogin: The authentication token (e.g., wott_IC5J7NJ3AYCBI2FXRRKDB37SBR5NS3RI)
+ * - dbid: The database ID to connect to
+ * 
+ * TROUBLESHOOTING:
+ * ================
+ * If magic login redirects to login form instead of admin page:
+ * - Verify WASMER_GRAPHQL_URL environment variable is set correctly
+ * - Check that the token is valid and not expired
+ * - Ensure the user has access to the requested database
+ * - Verify WASMER_APP_ID matches the database's app (if set)
+ * - Check for CORS errors in browser console
+ */
 class AdminerWasmer
 {
     private $wasmerAppId;
 
     function __construct()
     {
+        // Load the app ID from environment to restrict database access to a specific app
         $this->wasmerAppId = getenv("WASMER_APP_ID");
 
+        // Check if this is a magic login request
+        // Magic login requires: magiclogin token, dbid parameter, and NO username (to avoid conflicts)
         if (isset($_GET["magiclogin"]) && isset($_GET["dbid"]) && !isset($_GET["username"])) {
+            // Get the Wasmer GraphQL API URL from environment
             $url = getenv("WASMER_GRAPHQL_URL");
             if (!$url) {
                 die('Error while doing Magic Login: WASMER_GRAPHQL_URL environment variable is not set.');
             }
+            
+            // Extract the magic login token from the URL parameter
+            // This token (e.g., wott_IC5J7NJ3AYCBI2FXRRKDB37SBR5NS3RI) is a backend authentication token
+            // It will be used as a Bearer token when querying the Wasmer GraphQL API
             $authToken = $_GET["magiclogin"];
+            
+            // GraphQL query to fetch database credentials
+            // The token is validated on the backend, and if authorized, returns:
+            // - Database connection details (host, port, username, name, password)
+            // - App information (id, adminUrl) for validation and navigation
             $query = <<<'GRAPHQL'
             query ($dbid: ID!) {
                 node(id: $dbid) {
@@ -71,31 +133,44 @@ class AdminerWasmer
             $variables = [
                 "dbid" => $_GET["dbid"]
             ];
+            
+            // Execute the GraphQL query with the magic login token
             $responseData = wasmer_graphql_query($url, $query, $variables, $authToken);
+            // Check if the GraphQL query was successful
             if (!$responseData) {
                 die('Error while doing Magic Login: Error occurred while fetching the database credentials.');
             }
 
-            // Extract node data
+            // Extract node data from the GraphQL response
             $nodeData = isset($responseData['data']['node']) ? $responseData['data']['node'] : null;
 
-            // Check if node data exists
+            // Validate that the database was found and user has access
+            // The backend validates the token and only returns data if authorized
             if ($nodeData === null) {
                 die('Error while doing Magic Login: Database with the provided id couldn\'t be found, or you don\'t have access to it.');
             }
 
+            // Security check: If WASMER_APP_ID is configured, ensure the database
+            // belongs to this specific app. This prevents access to databases from other apps.
             if ($this->wasmerAppId && $this->wasmerAppId !== '') {
                 if ($nodeData["app"]["id"] !== $this->wasmerAppId) {
                     die('Error while doing Magic Login: Database app doesn\'t match.');
                 }
             }
+            
+            // Store the admin URL in a cookie so we can display a "Go to Dashboard" link
             $adminUrl = $nodeData["app"]["adminUrl"];
             setcookie("wasmer_admin_url", $adminUrl, time() + 3600, "/");
 
+            // Build the database server address (host:port format)
             $server = $nodeData["host"];
             if ($nodeData["port"]) {
                 $server .= ":" . $nodeData["port"];
             }
+            
+            // Inject the database credentials into POST data
+            // This simulates a manual login form submission, triggering Adminer's authentication
+            // The user is automatically logged in without seeing the login form
             $_POST["auth"] = array(
                 "driver" => "server",
                 "server" => $server,
@@ -117,6 +192,13 @@ class AdminerWasmer
         echo '<link rel="stylesheet" href="static/wasmer.css">';
     }
 
+    /**
+     * Add custom navigation link to return to Wasmer dashboard
+     * 
+     * If a magic login was performed, the admin URL is stored in a cookie.
+     * This function adds a navigation link at the top of Adminer to easily
+     * return to the Wasmer app dashboard.
+     */
     function navigation($missing)
     {
         if (isset($_COOKIE["wasmer_admin_url"])) {
@@ -124,7 +206,7 @@ class AdminerWasmer
             $escapedAdminUrl = htmlspecialchars($adminUrl);
             if ($escapedAdminUrl) {
 ?>
-                <a id="wasmer-dashboard-link" href="<? echo "$escapedAdminUrl"; ?>">
+                <a id="wasmer-dashboard-link" href="<?php echo $escapedAdminUrl; ?>">
                     <svg viewBox="0 0 29 34" height="1em" width="1em">
                         <g clip-path="url(#prefix__clip0_1268_12249)">
                             <path d="M0 12.3582C0 10.4725 0 9.52973 0.507307 9.23683C1.01461 8.94394 1.83111 9.41534 3.46411 10.3581L10.784 14.5843C12.417 15.5271 13.2335 15.9985 13.7408 16.8771C14.2481 17.7558 14.2481 18.6986 14.2481 20.5843V29.0364C14.2481 30.9221 14.2481 31.8649 13.7408 32.1578C13.2335 32.4507 12.417 31.9793 10.784 31.0365L3.4641 26.8103C1.83111 25.8675 1.01461 25.3961 0.507307 24.5175C0 23.6388 0 22.696 0 20.8103V12.3582Z"></path>
@@ -141,7 +223,7 @@ class AdminerWasmer
                     Wasmer App Dashboard
                 </a>
 
-<?
+<?php
             }
         }
     }
