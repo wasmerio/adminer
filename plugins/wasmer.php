@@ -117,6 +117,7 @@ class AdminerWasmer
                 node(id: $dbid) {
                     ... on AppDatabase {
                         id
+                        engine
                         host
                         port
                         username
@@ -168,11 +169,24 @@ class AdminerWasmer
                 $server .= ":" . $nodeData["port"];
             }
             
+            // Select the Adminer driver from the database engine.
+            // Adminer driver ids: "server" = MySQL, "pgsql" = PostgreSQL.
+            // Precedence: engine from GraphQL > ADMINER_DRIVER env > "server".
+            $driver = getenv("ADMINER_DRIVER") ?: "server";
+            $engineDrivers = [
+                "MYSQL" => "server",
+                "POSTGRES" => "pgsql",
+                "SQLITE" => "sqlite",
+            ];
+            if (isset($nodeData["engine"]) && isset($engineDrivers[$nodeData["engine"]])) {
+                $driver = $engineDrivers[$nodeData["engine"]];
+            }
+
             // Inject the database credentials into POST data
             // This simulates a manual login form submission, triggering Adminer's authentication
             // The user is automatically logged in without seeing the login form
             $_POST["auth"] = array(
-                "driver" => "server",
+                "driver" => $driver,
                 "server" => $server,
                 "username" => $nodeData["username"],
                 "db" => $nodeData["name"],
